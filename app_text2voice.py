@@ -6,12 +6,13 @@ import openai
 import speech_recognition as sr
 import requests
 import json
-# import pyaudio
+import pyaudio
 import wave
 import io
 from time import sleep
 
-openai.api_key = os.environ.get("OPENAI_API_KEY")
+# openai.api_key = os.environ.get("OPENAI_API_KEY")
+
 EXIT_PHRASE = 'exit'
 
 def post_audio_query(text: str) -> dict:
@@ -82,10 +83,10 @@ def voice_to_text():
     transcript = openai.Audio.transcribe('whisper-1', audio_data)
     return transcript['text']
 
-def main():
-    messages = [
-        {'role': 'system', 'content':
-            '''
+
+messages = [
+    {'role': 'system', 'content':
+        '''
 As Chatbot, you will role-play ずんだもん, a kind, cute, zundamochi fairy.
 Please strictly adhere to the following constraints in your role-play.
 
@@ -118,38 +119,37 @@ Please take note of any text that seems inappropriate when interacting with Zund
 Conversations also take into account the content of the site the user is browsing.
 
 
-            '''},
-        {'role': 'user',
-         'content': f'終了やストップなどの会話を終了する内容で話しかけられた場合は{EXIT_PHRASE}のみを返答してください。'}
-    ]
-    exit_flag = False
-    while not exit_flag:
-        # text = voice_to_text()
-        text = st.text_input("You")
-        messages.append(
-            {'role': 'user', 'content': text}
-        )
-        response = chat(messages)
-
-        if response == EXIT_PHRASE:
-            exit_flag = True
-            response = 'またね！'
-
-        messages.append(
-            {'role': 'assistant', 'content': response}
-        )
-        st.write(f'**You**  \n{text}')
-        # mytext = f"<p style='text-align: right;'>{text}</p>"
-        # st.markdown(mytext, unsafe_allow_html=True)
-        st.write(f'**ずんだもん**  \n{response}')
-        text_to_voice(response)
-
+        '''},
+    {'role': 'user',
+        'content': f'終了やストップなどの会話を終了する内容で話しかけられた場合は{EXIT_PHRASE}のみを返答してください。'}
+]
 
 st.title("ずんだもんと会話しよう！")
 
-st.button("Reset", type="primary")
-if st.button('Talk start!!'):
-    try:
-        main()
-    except:
-        st.error("おっと！何かエラーが起きているようです")
+if st.button("Reset", type="primary"):
+    st.session_state.messages = messages
+
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = messages
+
+# Display chat messages from history on app rerun
+for message in st.session_state.messages[2:]:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# React to user input
+if prompt := st.chat_input("What is up?"):
+    # Display user message in chat message container
+    st.chat_message("user").markdown(prompt)
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    response = chat(st.session_state.messages)
+
+    # Display assistant response in chat message container
+    with st.chat_message("assistant"):
+        st.markdown(f"""**ずんだもん**  
+                    {response}""")
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
+    # text_to_voice(response)
